@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 import { StyleSheet } from 'react-native'
 import "./global.css"
 import { useFonts } from "expo-font"
+import { GlobalProvider } from '@/global-provider'
 
 const RootLayout = () => {
     const [fontsLoaded] = useFonts({
@@ -26,7 +27,9 @@ const RootLayout = () => {
 
 
     return (
-        <Stack screenOptions={{ headerShown: false }} />
+        <GlobalProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+        </GlobalProvider>
     )
 }
 
