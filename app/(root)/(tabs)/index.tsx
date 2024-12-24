@@ -1,25 +1,55 @@
 import { Card, FeaturedCard } from '@/components/Cards'
 import Filters from '@/components/Filters'
+import NoResults from '@/components/NoResults'
 import Search from '@/components/Search'
 import icons from '@/constants/icons'
-import images from '@/constants/images'
 import { useGlobalContext } from '@/global-provider'
-import React from 'react'
-import { FlatList, Image, SafeAreaView, Text, TouchableOpacity, View } from 'react-native'
+import { getLatestProperties, getProperties } from '@/lib/appwrite'
+import { useAppwrite } from '@/lib/useAppwrite'
+import { router, useLocalSearchParams } from 'expo-router'
+import React, { useEffect } from 'react'
+import { ActivityIndicator, FlatList, Image, SafeAreaView, Text, TouchableOpacity, View } from 'react-native'
 
 const Index = () => {
     const { user } = useGlobalContext();
+    const params = useLocalSearchParams<{ query?: string; filter?: string; }>();
+    const { data: latestProperties, loading: latestPropertiesLoading } = useAppwrite({ fn: getLatestProperties })
+    const { data: properties, loading, refetch } = useAppwrite(
+        {
+            fn: getProperties,
+            params: {
+                filter: params.filter!,
+                query: params.query!,
+                limit: 5
+            }
+        })
 
+    const handleCardPress = (id: string) => {
+        router.push(`/properties/${id}`)
+    }
+
+    useEffect(() => {
+        refetch({
+            filter: params.filter!,
+            query: params.query!,
+            limit: 6
+        })
+    }, [params.filter, params.query])
     return (
         <SafeAreaView className="bg-white h-full">
             <FlatList
-                data={[1, 2, 3, 4]}
-                renderItem={({ item }) => <Card />}
-                keyExtractor={(item) => item.toString()}
+                data={properties}
+                renderItem={({ item }) => <Card onPress={() => handleCardPress(item.$id)} item={item} />}
+                keyExtractor={(item) => item.$collectionId.toString()}
                 numColumns={2}
                 contentContainerClassName="pb-32"
                 columnWrapperClassName="flex gap-5 px-5"
                 showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    loading ? (<ActivityIndicator
+                        size="large"
+                        className="text-primary-300 mt-5" />) : <NoResults />
+                }
                 ListHeaderComponent
                 ={<View className="px-5">
                     <View className="flex flex-row items-center justify-between mt-5">
@@ -51,15 +81,23 @@ const Index = () => {
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                        <FlatList
-                            data={[1, 2, 3]}
-                            keyExtractor={(item) => item.toString()}
-                            renderItem={() => <FeaturedCard />}
-                            horizontal
-                            bounces={false}
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerClassName="flex gap-5 mt-5"
-                        />
+                        {
+                            latestPropertiesLoading ? <ActivityIndicator
+                                size="large" className="text-primary-300 mt-5" /> : !latestProperties || latestProperties?.length === 0 ? <NoResults /> : <FlatList
+                                    data={latestProperties}
+                                    keyExtractor={(item) => item.$collectionId}
+                                    renderItem={({ item }) => <FeaturedCard onPress={() => handleCardPress(item.$id)} item={item} />}
+                                    horizontal
+                                    bounces={false}
+                                    ListEmptyComponent={
+                                        loading ? (<ActivityIndicator
+                                            size="large"
+                                            className="text-primary-300 mt-5" />) : <NoResults />
+                                    }
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerClassName="flex gap-5 mt-5"
+                                />
+                        }
                     </View>
 
 
